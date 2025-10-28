@@ -275,7 +275,7 @@ class GPT(nn.Module):
             logits = softcap * torch.tanh(logits / softcap) # logits softcap
             logits = logits.float() # use tf32/fp32 for logits
             if LIGER_AVAILABLE:
-                loss = liger_cross_entropy(logits, targets, ignore_index=-1, reduction=loss_reduction)
+                loss = liger_cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1, reduction=loss_reduction)
             else:
                 loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1, reduction=loss_reduction)
             return loss
