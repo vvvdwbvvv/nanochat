@@ -23,6 +23,13 @@ from nanochat.common import get_dist_info, print0
 from nanochat.muon import Muon, DistMuon
 from nanochat.adamw import DistAdamW
 
+try:
+    from liger_kernel.transformers.functional import liger_cross_entropy
+    LIGER_AVAILABLE = True
+except Exception:
+    liger_cross_entropy = None
+    LIGER_AVAILABLE = False
+
 @dataclass
 class GPTConfig:
     sequence_len: int = 1024
@@ -267,7 +274,10 @@ class GPT(nn.Module):
             logits = self.lm_head(x)
             logits = softcap * torch.tanh(logits / softcap) # logits softcap
             logits = logits.float() # use tf32/fp32 for logits
-            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1, reduction=loss_reduction)
+            if LIGER_AVAILABLE:
+                loss = liger_cross_entropy(logits, targets, ignore_index=-1, reduction=loss_reduction)
+            else:
+                loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1, reduction=loss_reduction)
             return loss
         else:
             # inference mode: compute and return the logits
